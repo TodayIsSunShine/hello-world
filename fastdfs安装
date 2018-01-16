@@ -130,15 +130,12 @@ vim /etc/init.d/fdfs_trackerd
 
 4、配置跟踪器 
 4.1进入fdfs目录
-
 cd /etc/fdfs/
 
 #目录配置跟踪器文件，把tracker.conf.samp le文件进行cope一份:去修改tracker.conf文件
-
 cp -a tracker.conf.sample  tracker.conf
 
 #查询copy文件是否成功
-
 ls -l
 
 #ls -l之后控制如输出接口如下:
@@ -156,3 +153,354 @@ vim /etc/fdfs/tracker.conf
 
 #把base_path替换成我们自己的文件存放目录
 base_path=/fastdfs/tracker
+
+#注意:
+#对于tracker.conf配置文件参数解释可以找官方文档
+地址为: http://bbs.chinaunix.net/thread-1941456-1-1.html
+
+#4.3 最后我们一定要创建之前定义好的目录, 也就是base_path = /fastdfs/tracker的目录
+#命令:
+mkdir -p /fastdfs/tracker
+   
+#4.4 添加防火墙规则:
+vim /etc/sysconfig/iptables
+
+# 添加入站规则 注意: -A INPUT -j REJECT --reject-with icmp-host-prohibited行之止添加
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 22122 -j 
+
+注意：这里使用80和8080端口为例。
+一般添加到“-A INPUT -p tcp -m state –state NEW -m tcp–dport 22 -j ACCEPT”行的上面或者下面
+切记不要添加到最后一行，否则防火墙重启后不生效。
+
+[root@jsyfdev001 fdfs]# vim /etc/sysconfig/iptables
+# sample configuration for iptables service
+# you can edit this manually or use system-config-firewall
+# please do not ask us to add additional ports/services to this default configuration
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+-A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+-A INPUT -p icmp -j ACCEPT
+-A INPUT -i lo -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp --dport 22 -j ACCEPT
+
+# FastDFS开放接口
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 22122 -j ACCEPT
+
+#重启防火墙使配置生效
+#systemctl restart iptables.service
+#设置防火墙开机启动
+#systemctl enable iptables.service
+
+# - --------------------以下为拒绝接口-------------------
+-A INPUT -j REJECT --reject-with icmp-host-prohibited
+-A FORWARD -j REJECT --reject-with icmp-host-prohibited
+
+COMMIT
+
+#添加防火墙之后, 重启防火墙
+
+service iptables restart 
+# 或者以下命令(根据不同防火墙重启)
+systemctl restart iptables.service
+
+#4.5 启动跟踪器
+查询tracker 注意: 在此处是没有任何文件的
+
+cd /fastdfs/tracker/ && ls -l
+
+#启动tracker命令: 初次启动成功后会在/fastdbf/tracker/ 目录下创建 data、logs俩个目录
+
+/etc/init.d/fdfs_trackerd start 
+
+
+#查询tracker 注意: 在此处会出现data,logs两个目录
+
+cd /fastdfs/tracker/ && ls -l
+
+
+#注意: 楼主在此处运行fdfs_trackerd start没有启动, 如下(没有遇到请忽略)
+
+[root@jsyfdev001 tracker]# /etc/init.d/fdfs_trackerd start
+Starting fdfs_trackerd (via systemctl):  Warning: fdfs_trackerd.service changed on disk. Run 'systemctl daemon-reload' to reload units.
+                                                           [  OK  ]
+
+#如果遇到以下错误,请执行下面命令(没有遇到请忽略)
+systemctl daemon-reload
+
+
+#查看进程命令:
+ps -ef | grep fdfs 
+
+#停止tracker命令:
+/etc/init.d/fdfs_trackerd stop
+
+
+4.6 可以设置开机启动跟踪器:
+命令如下:
+
+vim /etc/rc.d/rc.local
+
+加入配置:/etc/init.d/fdfs_trackerd start
+
+#5、配置FastDFS存储
+#5.1
+
+# 进入fdfs文件目录:
+cd /etc/fdfs/
+# copy storage文件一份 
+cp storage.conf.sample storage.conf
+
+
+#修改内容:
+base_path=/fastdfs/storage
+store_path0=/fastdfs/storage
+tracker_server=ip:22122 #注意填写ip
+http.server_port=8888 
+
+ 
+#5.3 创建存储目录:
+mkdir -p /fastdfs/storage
+
+#5.4 打开防火墙:
+注意: 此处和步骤4.4除了开放端口不同,基本相同,详情请参考4.4
+
+vim /etc/sysconfig/iptables
+
+# 添加防火墙规则
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 23000 -j ACCEPT
+
+service iptables restart
+# 或者以下命令(根据不同防火墙重启)
+systemctl restart iptables.service
+
+5.5 启动存储(storage)
+命令:
+
+# 启动 初次启动成功后会在/fastdfs/storage/ 目录下创建 data、logs俩个目录 
+
+ls -l /fastdfs/storage/
+
+**注意:** 初次启动时, data目录创建较慢,请耐心等待
+/etc/init.d/fdfs_storaged start 
+#关闭
+/etc/init.d/fdfs_storaged stop
+
+5.6 查看FastDFS storage 是否启动成功
+
+#命令
+ps -ef | grep fdfs
+
+
+并且我们进入到/fastdfs/storage/data/文件夹下会看到一些目录文件(256*256)
+
+cd /fastdfs/storage/data/ && ls
+
+
+到此为止我们的FastDFS环境已经搭建完成!
+
+#6、测试环境
+#6.1 我们先使用命令上传一个文件。注意:是在tracker(跟踪器)中上传。
+首先我们在跟踪器里copy一份client.conf文件。
+
+cd /etc/fdfs/
+cp client.conf.sample client.conf
+
+
+#6.2 编辑client.conf文件
+vim /etc/fdfs/client.conf
+
+
+修改内容:
+base_path=/fastdfs/tracker
+tracker_server=ip:22122 # 注意这里填写ip
+
+ 
+#6.3 我们找到命令的脚本位置，并且使用命令，进行文件的上传:
+
+[root@jsyfdev001 fdfs]# cd /usr/bin/
+
+[root@jsyfdev001 bin]# ls | grep fdfs
+fdfs_appender_test
+fdfs_appender_test1
+fdfs_append_file
+fdfs_crc32
+fdfs_delete_file
+fdfs_download_file
+fdfs_file_info
+fdfs_monitor
+fdfs_storaged
+fdfs_test
+fdfs_test1
+fdfs_trackerd
+fdfs_upload_appender
+fdfs_upload_file
+
+
+#6.4 使用命令fdfs_upload_file进行上传操作:
+首先，我们先看一下存储器，进入到data下，在进入00文件夹 下，发现00文件夹下还有一堆文件夹，然后继续进入00文件夹下，最终我们所 进入的文件夹为:
+
+[root@jsyfdev001 00]# ls -l /fastdfs/storage/data/00/00
+total 0
+
+
+然后，我们进行上传操作，比如把之前的/usr/local/software/文件夹下的某一个 文件上传到FastDFS系统中去，在跟踪器中上传文件
+命令如下:
+
+[root@jsyfdev001 local]# /usr/bin/fdfs_upload_file /etc/fdfs/client.conf /usr/local/software/FastDFS_v5.05.tar.gz
+group1/M00/00/00/L12w41nulh-AUqfMAAVFOL7FJU4.tar.gz
+
+
+最后我们发现，命令执行完毕后，返回一个group1/M00/00/00/…的ID，其实就 是返回当前所上传的文件在存储器中的哪一个组、哪一个目 录位置，所以我们查看存储器中的/fastdfs/storage/data/00/00文件夹位置，发现 已经存在了刚才上传的文件，到此为止，我们的测试上传文件已经OK了。如下 :
+
+[root@jsyfdev001 00]# ls -l /fastdfs/storage/data/00/00
+total 1132
+-rw-r--r-- 1 root root 345400 Oct 22 23:38 L12w41nsu2-AHA7xAAVFOL7FJU4.tar.gz
+
+
+#7、FastDFS与Nginx整合
+#7.1 首先机器里必须先安装nginx
+#安装步骤, 请查看我的另一个Nginx安装教程
+http://blog.csdn.net/hanwuqia0370/article/details/78151934
+
+#7.2 然后我们在存储节点上安装fastdfs-nginx- module_v1.16.tar.gz包进行整合。
+# 目录命令:
+[root@jsyfdev001 ~]# cd /usr/local/software/
+
+# 解压命令:
+[root@jsyfdev001 ~]# tar -zxvf /usr/local/software/fastdfs-nginx-module_v1.16.tar.gz -C /usr/local/fast/
+
+#7.3 进入目录:
+[root@jsyfdev001 ~]# cd /usr/local/fast/fastdfs-nginx-module/src
+
+7.4 编辑配置文件config
+命令:
+修改前: 把config文件中第4行的最后一个local文件层次去掉 把
+/usr/include/fastdfs 修改为 /usr/local/include/fastdfs
+/usr/local/include/fastcommon/ 修改为 /usr/include/fastcommon/
+
+具体如下:
+[root@jsyfdev001 ~]# vim /usr/local/fast/fastdfs-nginx-module/src/config
+ngx_addon_name=ngx_http_fastdfs_module
+HTTP_MODULES="$HTTP_MODULES ngx_http_fastdfs_module"
+NGX_ADDON_SRCS="$NGX_ADDON_SRCS $ngx_addon_dir/ngx_http_fastdfs_module.c"
+CORE_INCS="$CORE_INCS /usr/local/include/fastdfs /usr/local/include/fastcommon/"
+CORE_LIBS="$CORE_LIBS -L/usr/local/lib -lfastcommon -lfdfsclient"
+CFLAGS="$CFLAGS -D_FILE_OFFSET_BITS=64 -DFDFS_OUTPUT_CHUNK_SIZE='256*1024' -DFDFS_MOD_CONF_FILENAME='\"/etc/fdfs/mod_fastdfs.conf\"'"
+
+修改后: 
+[root@jsyfdev001 ~]# vim /usr/local/fast/fastdfs-nginx-module/src/config
+ngx_addon_name=ngx_http_fastdfs_module
+HTTP_MODULES="$HTTP_MODULES ngx_http_fastdfs_module"
+NGX_ADDON_SRCS="$NGX_ADDON_SRCS $ngx_addon_dir/ngx_http_fastdfs_module.c"
+CORE_INCS="$CORE_INCS /usr/include/fastdfs /usr/include/fastcommon/"
+CORE_LIBS="$CORE_LIBS -L/usr/local/lib -lfastcommon -lfdfsclient"
+CFLAGS="$CFLAGS -D_FILE_OFFSET_BITS=64 -DFDFS_OUTPUT_CHUNK_SIZE='256*1024' -DFDFS_MOD_CONF_FILENAME='\"/etc/fdfs/mod_fastdfs.conf\"'"
+
+#7.5 FastDFS与nginx进行集成
+#首先把7.1步骤之前的nginx进行删除
+
+目录命令:
+[root@jsyfdev001 nginx-1.6.2]# cd /usr/local/
+
+删除命令:
+[root@jsyfdev001 local]# rm -rf nginx
+
+#进入到nginx目录命令:
+[root@jsyfdev001 local]# cd /usr/local/nginx-1.6.2
+[root@jsyfdev001 nginx-1.6.2]# ./configure --add-module=/usr/local/fast/fastdfs-nginx-module/src/
+
+#重新安装编辑
+[root@jsyfdev001 nginx-1.6.2]# make && make install
+
+#7.6 复制fastdfs-ngin-module中的配置文件，到/etc/fdfs目录中，如图所示:
+copy命令:
+
+[root@jsyfdev001 src]# cp /usr/local/fast/fastdfs-nginx-module/src/mod_fastdfs.conf /etc/fdfs/
+
+#7.7 进行修改 /etc/fdfs/ 目录下，我们刚刚copy过来的mod_fastdfs.conf 文件。
+
+[root@jsyfdev001 src]# vim /etc/fdfs/mod_fastdfs.conf
+
+# 修改内容:比如连接超时时间、跟踪器路径配置、url的group配置
+connect_timeout=10
+tracker_server=ip:22122 # 注意这里填写本机的ip地址
+url_have_group_name = true
+store_path0=/fastdfs/storage
+
+
+#7.8 复制FastDFS里的2个文件，到/etc/fdfs目录中，如图所示
+目录命令:
+
+[root@jsyfdev001 src]# cd /usr/local/fast/FastDFS/conf/
+
+Copy命令:
+[root@jsyfdev001 conf]# cp http.conf mime.types /etc/fdfs/
+
+
+
+#7.9 创建一个软连接，在/fastdfs/storage文件存储目录下创建软连接，将其链接到实际存放数据 的目录。
+命令:
+
+[root@jsyfdev001 conf]# ln -s /fastdfs/storage/data/ /fastdfs/storage/data/M00
+
+#7.10 修改Nginx配置文件
+命令:
+
+[root@jsyfdev001 local]# sudo vim /usr/local/nginx/conf/nginx.conf
+
+修改配置内容如下图所示:
+
+修改内容为:
+listen 8888;
+server_name localhost;
+location ~/group([0-9])/M00 {
+    #alias /fastdfs/storage/data;
+    ngx_fastdfs_module; 
+}
+
+
+#注意:
+#nginx里的端口要和第五步配置FastDFS存储中的storage.conf文件配置一致， 也就是(http.server_port=8888)
+
+#11 最后检查防火墙，然后我们启动nginx服务
+
+启动命令:
+[root@jsyfdev001 00]# sudo ps -ef | grep nginx
+
+找到我们6.4步骤中上传的附件
+
+[root@jsyfdev001 00]# ls -l /fastdfs/storage/data/00/00
+total 1132
+-rw-r--r-- 1 root root 345400 Oct 22 23:38 L12w41nsu2-AHA7xAAVFOL7FJU4.tar.gz
+
+
+现在我们使用这个ID用浏览器访问地址:
+http://ip:8888/group1/M00/00/00/L12w41nsu2-AHA7xAAVFOL7FJU4.tar.gz
+我们就可以下载这个文件啦!
+注意: 我们在使用FastDFS的时候，需要正常关机，不要使用kill -9 强杀FastDFS进程，不然会在文件上传时出现丢数据的情况。 到此，我们的FastDFS与Nginx整合完毕!!
+
+#8:启动停止服务步骤如下:
+#启动命令:
+
+# 启动tracker命令:
+/etc/init.d/fdfs_trackerd start 
+# 查看进程命令:
+ps -el | grep fdfs 
+# 启动storage命令:
+/etc/init.d/fdfs_storaged start 
+# 查看进程命令:
+ps -el | grep fdfs 
+# 启动nginx命令:
+/usr/local/nginx/sbin/nginx 
+
+
+停止命令:
+
+# 停止tracker命令:
+/etc/init.d/fdfs_trackerd stop 
+# 关闭storage命令:
+/etc/init.d/fdfs_storaged stop 
+# 关闭nginx命令:
+/usr/local/nginx/sbin/nginx -s stop
