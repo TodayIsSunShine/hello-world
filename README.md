@@ -9,4 +9,9 @@
     CLASSPATH=.:$JAVA_HOME/lib.tools.jar
     PATH=$JAVA_HOME/bin:$PATH
     export JAVA_HOME CLASSPATH PATH
-4.配置完成后,使用java -version来检查是否配置成功
+    
+    
+
+4.让修改及时生效
+source /etc/profile
+5.配置完成后,使用java -version来检查是否配置成功
