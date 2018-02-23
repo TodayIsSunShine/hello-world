@@ -15,3 +15,14 @@
 4.让修改及时生效
 source /etc/profile
 5.配置完成后,使用java -version来检查是否配置成功
+
+# tomcat启动慢的原因
+https://www.cnblogs.com/jie-fang/p/7211574.html
+
+# centos7防火墙设置
+https://www.cnblogs.com/moxiaoan/p/5683743.html
+
+# zookeeper的配置
+server.1=127.0.0.1:2888:3888
+server.2=127.0.0.1:2889:3889
+server.3=127.0.0.1:2890:3890
