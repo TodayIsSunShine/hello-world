@@ -1,0 +1,8 @@
+#工具类详见地址:
+http://blog.csdn.net/syz_mumu/article/details/77203247
+
+#服务器下载FFmpeg tar包
+wget http://ffmpeg.org/releases/ffmpeg-3.4.1.tar.gz
+
+#本地安装ffmpeg详见链接:
+http://blog.csdn.net/chy466071353/article/details/54949221
