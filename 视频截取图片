@@ -2,7 +2,43 @@
 http://blog.csdn.net/syz_mumu/article/details/77203247
 
 #服务器下载FFmpeg tar包
-wget http://ffmpeg.org/releases/ffmpeg-3.4.1.tar.gz
+1.首先进入cd/local/software下载ffmpeg tar包
+命令:  wget http://ffmpeg.org/releases/ffmpeg-3.4.1.tar.gz
+解压tar包,tar -zxvf ffmpeg-3.4.1.tar.gz  -C ../  到/usr/local目录下
+
+2.进入cd/local/software下载yasm  tar包
+命令:  wget http://www.tortall.net/projects/yasm/releases/yasm-1.3.0.tar.gz
+解压tar包,tar -zxvf  yasm-1.3.0.tar.gz  -C ../  到/usr/local目录下
+
+3.配置环境变量
+vim /etc/profile 在末尾加上
+export FFMPEG_HOME=/usr/local/ffmpeg 
+export PATH=$FFMPEG_HOME/bin:$PATH
+
+
+4.进入cd /usr/local/ffmpeg配置安装路径
+./configure --enable-shared --prefix=/usr/local/ffmpeg
+--enable-shared 参数据说是允许其编译产生动态库，在以后的编程中要用到这个几个动态库。
+如果出现异常，提示因为缺少yasm，需要添加参数，再执行以下命令
+
+5.cd /usr/local/yasm-1.3.0/
+命令: ./configure,然后make,在make install
+
+6.在进入到/usr/local/ffmpeg执行命令:
+./configure --enable-shared --disable-yasm --prefix=/usr/local/ffmpeg,安装完毕后进行make,在make install
+
+7.安装之后在/usr/local/ffmpeg会看到有三个目录
+bin 执行文件目录
+lib 静态，动态链接库目录
+include 编程用到的头文件
+
+8.执行./ffmpeg -version查看版本号,若出现error while loading shared libraries: libavdevice.so.52的错误
+修改/etc/ld.so.conf 在最后一行加上/usr/local/ffmpeg/lib
+
+9.在执行ldconfig -v 让其配置生效
+
+10.最后修改 /usr/local/ffmpeg/lib目录下的文件权限为777
+命令:chmod -R 777 /usr/local/ffmpeg/lib
 
 #本地安装ffmpeg详见链接:
-http://blog.csdn.net/chy466071353/article/details/54949221
+https://blog.csdn.net/nctu_to_prove_safety/article/details/70851634
