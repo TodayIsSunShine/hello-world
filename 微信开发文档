@@ -1,0 +1,384 @@
+1.公众号开发信息：
+首先进入微信公众平台官网注册一个订阅号,注册成功会有一个开发者ID(AppID)和开发者密码(AppSecret)(自行设置),ip白名单设置的ip只有当前ip能够调用接口
+2.服务器配置(已启用)：
+配置服务器地址,该地址是微信服务器回调的url,这个回调接口也只能是外网，而且微信要求回调接口只能是通过ICP备案的域名，不能使用IP，
+详情请见：https://blog.csdn.net/xyang81/article/details/52141881
+
+3.下面是和微信服务器交互成功的代码
+package com.geekbar.store.controller.store;
+
+import com.geekbar.service.WeChatService;
+import com.geekbar.utils.SignUtil;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.PrintWriter;
+
+--------------------------------controller(该url就是服务器配置的url)---------------------------------------------------------
+@Controller
+@RequestMapping(value = "/wechat/token")
+public class WeChatController {
+
+    @Resource
+    private WeChatService weChatService;
+
+
+    /**
+     * 验证微信服务器
+     *
+     * @param request
+     * @param response
+     * @return void
+     * @author 张翔翔
+     * @date 2018/7/24 20:54
+     */
+    @ResponseBody
+    @RequestMapping(value = "/get", method = {RequestMethod.GET, RequestMethod.POST})
+    public void weChatService(HttpServletRequest request, HttpServletResponse response) throws Exception {
+        System.out.println("进入chat");
+        boolean isGet = request.getMethod().toLowerCase().equals("get");
+        if (isGet) {
+            // 微信加密签名
+            String signature = request.getParameter("signature");
+            System.out.println("微信加密签名signature：-----------------------" + signature);
+            // 时间戳
+            String timestamp = request.getParameter("timestamp");
+            System.out.println("时间戳timestamp：-----------------------" + timestamp);
+            // 随机数
+            String nonce = request.getParameter("nonce");
+            System.out.println("随机数nonce：-----------------------" + nonce);
+            // 随机字符串
+            String echostr = request.getParameter("echostr");
+            System.out.println("随机字符串echostr：-----------------------" + echostr);
+
+            PrintWriter out = response.getWriter();
+            // 通过检验signature对请求进行校验，若校验成功则原样返回echostr，表示接入成功，否则接入失败
+            if (SignUtil.checkSignature("geekbar", signature, timestamp, nonce)) {
+                out.print(echostr);
+            }
+            out.close();
+            out = null;
+        } else {
+            System.out.println("enter post ");
+
+            try {
+                weChatServicePost(request, response);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
+    /**
+     * 接收来自微信发来的消息
+     *
+     * @param request
+     */
+
+    public void weChatServicePost(HttpServletRequest request, HttpServletResponse response) throws Exception {
+        System.err.println(request);
+        String responseMessage = weChatService.processRequest(request);
+        response.getWriter().print(responseMessage);
+        response.getWriter().flush();
+    }
+}
+
+
+------------------------------------工具类(用来验证签名和解析xml)-------------------------------------------------
+
+package com.geekbar.utils;
+
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+
+public class SignUtil {
+
+    /**
+     * 验证签名
+     *
+     * @param signature
+     * @param timestamp
+     * @param nonce
+     * @return
+     */
+    public static boolean checkSignature(String token, String signature, String timestamp, String nonce) {
+        System.err.println("signature:" + signature + "timestamp:" + timestamp + "nonce:" + nonce);
+        String[] arr = new String[]{token, timestamp, nonce};
+        // 将token、timestamp、nonce三个参数进行字典序排序
+        Arrays.sort(arr);
+        StringBuilder content = new StringBuilder();
+        for (int i = 0; i < arr.length; i++) {
+            content.append(arr[i]);
+        }
+        MessageDigest md = null;
+        String tmpStr = null;
+        try {
+            md = MessageDigest.getInstance("SHA-1");
+            // 将三个参数字符串拼接成一个字符串进行sha1加密
+            byte[] digest = md.digest(content.toString().getBytes());
+            tmpStr = byteToStr(digest);
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        content = null;
+        // 将sha1加密后的字符串可与signature对比，标识该请求来源于微信
+        return tmpStr != null ? tmpStr.equals(signature.toUpperCase()) : false;
+    }
+
+    /**
+     * 将字节数组转换为十六进制字符串
+     *
+     * @param byteArray
+     * @return
+     */
+    private static String byteToStr(byte[] byteArray) {
+        String strDigest = "";
+        for (int i = 0; i < byteArray.length; i++) {
+            strDigest += byteToHexStr(byteArray[i]);
+        }
+        return strDigest;
+    }
+
+    /**
+     * 将字节转换为十六进制字符串
+     *
+     * @param mByte
+     * @return
+     */
+    private static String byteToHexStr(byte mByte) {
+        char[] Digit = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+        char[] tempArr = new char[2];
+        tempArr[0] = Digit[(mByte >>> 4) & 0X0F];
+        tempArr[1] = Digit[mByte & 0X0F];
+        String s = new String(tempArr);
+        return s;
+    }
+}
+
+------------------------------------消息的解析工具类------------------------------------------------
+package com.geekbar.utils;
+
+import com.geekbar.mapping.entity.custom.store.TextMessage;
+import com.thoughtworks.xstream.XStream;
+import org.dom4j.Document;
+import org.dom4j.Element;
+import org.dom4j.io.SAXReader;
+
+import javax.servlet.http.HttpServletRequest;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 消息处理工具类
+ */
+public class MessageUtil {
+
+    /**
+     * 解析微信发来的请求（XML）
+     *
+     * @param request
+     * @return
+     * @throws Exception
+     */
+    public static Map<String, String> parseXml(HttpServletRequest request) throws Exception {
+        // 将解析结果存储在HashMap中
+        Map<String, String> map = new HashMap<String, String>();
+        // 从request中取得输入流
+        InputStream inputStream = request.getInputStream();
+        int size=inputStream.available();
+
+        // 读取输入流
+        SAXReader reader = new SAXReader();
+        Document document = reader.read(inputStream);
+        // 得到xml根元素
+        Element root = document.getRootElement();
+        // 得到根元素的所有子节点
+        List<Element> elementList = root.elements();
+        // 遍历所有子节点
+        for (Element e : elementList) {
+            map.put(e.getName(), e.getText());
+        }
+        // 释放资源
+        inputStream.close();
+        inputStream = null;
+        return map;
+    }
+
+
+    /**
+     * 文本消息转化为xml
+     *
+     * @param textMessage
+     * @return
+     */
+    public static String textMessageToXml(TextMessage textMessage) {
+        XStream xstream = new XStream();
+        xstream.alias("xml", textMessage.getClass());
+        return xstream.toXML(textMessage);
+
+    }
+}
+
+
+--------------------------------------消息的处理service---------------------------------------------
+package com.geekbar.service;
+
+import com.geekbar.common.utils.WeChatMessageUtil;
+import com.geekbar.mapping.entity.custom.store.TextMessage;
+import com.geekbar.utils.MessageUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.servlet.http.HttpServletRequest;
+import java.util.Map;
+
+@Service
+@Transactional(rollbackFor = Exception.class)
+public class WeChatService {
+
+
+    private Logger log = LoggerFactory.getLogger(this.getClass());
+
+    /**
+     * 接收消息
+     *
+     * @param request
+     * @return
+     */
+    public String processRequest(HttpServletRequest request) throws Exception {
+        String respMessage = null;
+        try {
+            // 默认返回的文本消息内容
+            String respContent = "请求处理异常，请稍候尝试！";
+            Map<String, String> map = MessageUtil.parseXml(request);
+            log.info(map.toString());
+            // 发送方帐号（一个OpenID）
+            String fromUserName = map.get("FromUserName");
+            // 开发者微信号
+            String toUserName = map.get("ToUserName");
+            // 消息类型
+            String msgType = map.get("MsgType");
+
+            // 对消息进行处理
+            TextMessage textMessage = new TextMessage();
+            textMessage.setMsgType(WeChatMessageUtil.MESSAGE_TEXT);
+            textMessage.setToUserName(fromUserName);
+            textMessage.setFromUserName(toUserName);
+            textMessage.setCreateTime(map.get("CreateTime"));
+            //判断是否是文本消息
+            if (msgType.equals(WeChatMessageUtil.MESSAGE_TEXT)) {
+             //这里是发送的消息,我这里是写死的
+             //这里做业务处理,发送具体的内容因人而定
+                respContent = "詹梦梦是小仙女哟!";
+            }
+
+            textMessage.setContent(respContent);
+            respMessage = MessageUtil.textMessageToXml(textMessage);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        log.error(respMessage);
+        return respMessage;
+
+    }
+}
+
+---------------------------------------实体类封装----------------------------------------------
+package com.geekbar.mapping.entity.custom.store;
+
+/**
+ * 接收消息基类（普通用户发送信息给公众帐号
+ */
+public class ReceiveBaseMessage {
+
+    // 开发者微信号
+    private String ToUserName;
+    // 发送方帐号（OpenID）
+    private String FromUserName;
+    // 消息创建时间
+    private String CreateTime;
+    // 消息类型（text/image/location/link）
+    private String MsgType;
+    // 消息id，64位整型
+    private String MsgId;
+
+    public String getToUserName() {
+        return ToUserName;
+    }
+
+    public void setToUserName(String toUserName) {
+        ToUserName = toUserName;
+    }
+
+    public String getFromUserName() {
+        return FromUserName;
+    }
+
+    public void setFromUserName(String fromUserName) {
+        FromUserName = fromUserName;
+    }
+
+    public String getCreateTime() {
+        return CreateTime;
+    }
+
+    public void setCreateTime(String createTime) {
+        CreateTime = createTime;
+    }
+
+    public String getMsgType() {
+        return MsgType;
+    }
+
+    public void setMsgType(String msgType) {
+        MsgType = msgType;
+    }
+
+    public String getMsgId() {
+        return MsgId;
+    }
+
+    public void setMsgId(String msgId) {
+        MsgId = msgId;
+    }
+}
+
+------------------------------------继承(这个bean只填写发送的文本内容)--------------------------------------
+package com.geekbar.mapping.entity.custom.store;
+
+/**
+ * 文本消息
+ */
+public class TextMessage extends ReceiveBaseMessage {
+    //文本消息
+    private String Content;
+
+    public String getContent() {
+        return Content;
+    }
+
+    public void setContent(String content) {
+        Content = content;
+    }
+}
+
+
+
+
+
+
+
+
