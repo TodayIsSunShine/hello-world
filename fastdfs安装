@@ -28,6 +28,8 @@ cd /usr/local/fast/libfastcommon-master/
 也就是说，我们的libfastcommon默认安装到了/usr/lib64/这个位置(如下: )。
 
 [root@jsyfdev001 libfastcommon-master]# ./make.sh install
+ls -l
+cd src
 mkdir -p /usr/lib64
 install -m 755 libfastcommon.so /usr/lib64
 mkdir -p /usr/include/fastcommon
@@ -377,7 +379,7 @@ http://blog.csdn.net/hanwuqia0370/article/details/78151934
 7.4 编辑配置文件config
 命令:
 修改前: 把config文件中第4行的最后一个local文件层次去掉 把
-/usr/include/fastdfs 修改为 /usr/local/include/fastdfs
+/usr/local/include/fastdfs 修改为 /usr/include/fastdfs 
 /usr/local/include/fastcommon/ 修改为 /usr/include/fastcommon/
 
 具体如下:
