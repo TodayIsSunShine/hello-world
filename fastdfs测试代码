@@ -1,0 +1,178 @@
+@Controller
+@RequestMapping("/att")
+public class TattachmentController {
+
+    @Autowired
+    private TattachmentService tattachmentService;
+
+
+    @RequestMapping(value = "/upload",method = RequestMethod.POST)
+    @ResponseBody
+    @Transactional(rollbackFor = Exception.class)
+    public void upload(HttpServletRequest request, HttpServletResponse response, String fileName, Integer createdBy) {
+
+        //设置返回给前台的值
+        String ret = null;
+        try {
+            MultipartFile mf = RequestUtils.getUploadFile(request);
+            //如果没有获取到文件路径，值返回给前台一个报错信息
+            if (mf == null || mf.isEmpty()) {
+                ResponseUtils.putJsonFailureResponse(response, BaseUtils.errorrRespond("未指定上传文件"));
+                return;
+            }
+
+            //调用文件上传的方法
+            JSONObject jsonObject = tattachmentService.put(mf, fileName, createdBy);
+            ret = BaseUtils.successObjRespond(jsonObject);
+
+            ResponseUtils.putJsonResponse(response, ret);
+        } catch (Exception e) {
+            e.printStackTrace();
+            ResponseUtils.putJsonResponse(response, BaseUtils.errorrRespond("文件上传错误"));
+        }
+
+    }
+}
+
+
+
+
+
+public class TattachmentService {
+
+    @Autowired
+    private TattachmentDao tattachmentDao;
+
+    public JSONObject put(MultipartFile file, String name, Integer createdBy) throws Exception {
+        System.err.println(name);
+        TattachmentEntity tattachmentEntity = new TattachmentEntity();
+        JSONObject jsonObject = new JSONObject();
+        //文件真实名称
+        String originalFilename = file.getOriginalFilename();
+        //过期时间
+        Date expireTime = new Date(tattachmentDao.selectSql().getTime() + 86400000);
+
+        String fileName = "";
+        if (StringUtils.isBlank(name)) {
+            fileName = originalFilename;
+        } else {
+            fileName = name;
+        }
+
+        if (null != createdBy) {
+            tattachmentEntity.setCreatedBy(createdBy);
+        }
+
+        //获取文件名后缀
+        String extName = originalFilename.substring(originalFilename.lastIndexOf(".") + 1).trim().toLowerCase();
+
+        //图片id
+//        String fileId = FileUploadUtils.upload(file.getBytes(), extName);
+        String fileId = null;
+        //图片所在组
+        String dataGroup = fileId.substring(0, fileId.indexOf("/"));
+        tattachmentEntity.setFileAllUrl(fileId);
+        tattachmentEntity.setFileName(fileName);
+        tattachmentEntity.setCreatedTime(new Date());
+        tattachmentEntity.setExpireTime(expireTime);
+        tattachmentEntity.setSize(Integer.parseInt(String.valueOf(file.getSize())));
+        tattachmentEntity.setIsDel(Const.ZERO);
+        tattachmentEntity.setDataGroup(dataGroup);
+
+        tattachmentDao.insert(tattachmentEntity);
+
+        jsonObject.put("id", tattachmentEntity.getId());
+        jsonObject.put("fileUrl", fileId);
+        jsonObject.put("fileName", fileName);
+        jsonObject.put("fileAllUrl", Const.FASTDFS_URL + "/" + fileId);
+        jsonObject.put("dataGroup", dataGroup);
+        jsonObject.put("size", file.getSize());
+        jsonObject.put("expireTime", expireTime);
+
+        return jsonObject;
+    }
+}
+
+
+
+#fastdfs_client.conf配置文件
+connect_timeout = 200
+network_timeout = 3000
+charset = UTF-8
+http.tracker_http_port = 8080
+http.anti_steal_token = no
+http.secret_key = FastDFS1234567890
+
+tracker_server = 120.79.151.77:22122
+
+
+
+
+
+
+
+
+/**
+ * 上传图片工具类
+ */
+public class FileUploadUtils {
+    private static String CONF_FILENAME = null;
+    private static Logger logger = LoggerFactory.getLogger(FileUploadUtils.class);
+
+    private static TrackerClient trackerClient;
+
+
+    // 初始化FastDFS Client
+    static {
+        try {
+            CONF_FILENAME = Thread.currentThread().getContextClassLoader().getResource("fastdfs_client.conf").getPath();
+            ClientGlobal.init(CONF_FILENAME);
+            TrackerGroup trackerGroup = ClientGlobal.g_tracker_group;
+            trackerClient = new TrackerClient(trackerGroup);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 上传图片方法
+     * @param data 文件的内容,字节数组
+     * @param extName 文件扩展名
+     * @return
+     */
+    public static String upload(byte[] data, String extName) {
+        TrackerServer trackerServer = null;
+        StorageServer storageServer = null;
+        StorageClient1 storageClient1 = null;
+        try {
+            NameValuePair[] metaList = null;
+
+            trackerServer = trackerClient.getConnection();
+            if (trackerServer == null) {
+                logger.error("getConnection return null");
+            }
+            storageServer = trackerClient.getStoreStorage(trackerServer);
+            storageClient1 = new StorageClient1(trackerServer, storageServer);
+            String fileId = storageClient1.upload_file1(data, extName, metaList);
+            return fileId;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        } finally {
+            if (storageServer != null) {
+                try {
+                    storageServer.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (trackerServer != null) {
+                try {
+                    trackerServer.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+}
