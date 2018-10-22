@@ -1,0 +1,12 @@
+参考链接：
+https://blog.csdn.net/xb565517830/article/details/79107104
+
+其中搭建solr遇到的问题汇总：
+https://blog.csdn.net/zhen340417593/article/details/72841415
+
+最重要的一点,在solr5版本之后,shcema.xml更改名为managed-schema,在创建new_core时,无法找到booleans
+直接编辑managed-schema文件,找到boolean,在其下方添加
+   <fieldType name="string" class="solr.StrField" sortMissingLast="true" docValues="true" />
+   <fieldType name="strings" class="solr.StrField" sortMissingLast="true" multiValued="true" docValues="true" />
+   fieldType name="boolean" class="solr.BoolField" sortMissingLast="true"/>
+   <fieldType name="booleans" class="solr.BoolField" sortMissingLast="true" multiValued="true"/>
