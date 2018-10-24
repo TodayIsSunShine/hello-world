@@ -8,6 +8,11 @@
     export JRE_HOME=$JAVA_HOME/jre
     export PATH=.:$JAVA_HOME/bin:$PATH
     
+  配置maven
+    MAVEN_HOME=/usr/local/maven3
+    export MAVEN_HOME
+    export PATH=${PATH}:${MAVEN_HOME}/bin
+    
     
 
 4.让修改及时生效
