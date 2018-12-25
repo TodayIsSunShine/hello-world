@@ -1,6 +1,11 @@
 jenkins官网地址
 https://jenkins.io/
 
+查看ssh协议22端口是否启动
+netstat -anp | grep :22
+启动ssh协议
+service sshd start
+
 首先进入根目录
 cd /opt
 下载jenkins
