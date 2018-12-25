@@ -1,0 +1,25 @@
+首先进入根目录
+cd /opt
+下载jenkins
+wget http://mirrors.jenkins.io/war/2.83/jenkins.war
+启动jenkins服务
+java -jar jenkins.war &
+
+在此之前,请先安装java环境
+yum install java
+查看java安装是否成功
+java -version
+安装git环境
+yum install git 
+查看git安装是否成功
+git -version
+配置git全局邮箱,用户名(不一定是真是存在,只要有就可以)
+git config --global user.name 'qianjiu'
+git config --global user.email 'qianjiu@163.com'
+
+配置git私钥
+ssh-keygen -t rsa -C 'qianjiu@163.com' (邮箱自行修改)
+然后需要你配置密码,我们选择空,一路回车即可
+
+
+
