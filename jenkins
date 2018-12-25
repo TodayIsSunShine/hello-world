@@ -1,9 +1,17 @@
+jenkins官网地址
+https://jenkins.io/
+
 首先进入根目录
 cd /opt
 下载jenkins
 wget http://mirrors.jenkins.io/war/2.83/jenkins.war
 启动jenkins服务
 java -jar jenkins.war &
+
+访问jenkins
+输入 ip:8080,进入系统配置,选择插件管理,推荐安装的两款插件
+Rebuilder
+Safe Restart
 
 在此之前,请先安装java环境
 yum install java
@@ -15,11 +23,16 @@ yum install git
 git -version
 配置git全局邮箱,用户名(不一定是真是存在,只要有就可以)
 git config --global user.name 'qianjiu'
-git config --global user.email 'qianjiu@163.com'
+git config --global user.email 'qianjiu@abc.com'
 
 配置git私钥
-ssh-keygen -t rsa -C 'qianjiu@163.com' (邮箱自行修改)
+ssh-keygen -t rsa -C 'qianjiu@abc.com' (邮箱自行修改)
 然后需要你配置密码,我们选择空,一路回车即可
+
+cd ~/.ssh/进入生成私钥公钥目录
+编辑公钥
+vim id_rsa.pub 
+复制公钥里面的内容粘贴至github setting 配置key
 
 
 
