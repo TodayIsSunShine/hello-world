@@ -12,6 +12,8 @@ cd /opt
 wget http://mirrors.jenkins.io/war/2.83/jenkins.war
 启动jenkins服务
 java -jar jenkins.war &
+关闭ssh连接,保证jenkins在后台继续执行,nohup :启动一个服务,关闭终端(类似mysql)
+nohup java -jar jenkins.war
 
 访问jenkins
 输入 ip:8080,进入系统配置,选择插件管理,推荐安装的两款插件
@@ -38,6 +40,46 @@ cd ~/.ssh/进入生成私钥公钥目录
 编辑公钥
 vim id_rsa.pub 
 复制公钥里面的内容粘贴至github setting 配置key
+配置好key之后,与github服务器关联
+ssh git@github.com
+点击yes
+如果出现 You've successfully authenticated, but GitHub does not provide shell access.
+代表安装成功
+
+安装maven
+maven官网(http://maven.apache.org)
+wget http://mirrors.shu.edu.cn/apache/maven/maven-3/3.6.0/binaries/apache-maven-3.6.0-bin.zip
+首先安装解压unzip命令
+yum -y install unzip zip
+解压maven
+unzip apache-maven-3.6.0-bin.zip 
+配置maven环境
+vim /etc/profile
+export MAVEN_HOME=usr/local/maven3
+export PATH=$MAVEN_HOME/bin:$PATH
+保存后执行命令是配置文件生效
+source /etc/profile或者. /etc/profile
+验证maven是否安装成功
+mvn -version
+
+安装tomcat
+tomcat官网(http://tomcat.apache.org/)
+wget http://mirror.bit.edu.cn/apache/tomcat/tomcat-9/v9.0.14/bin/apache-tomcat-9.0.14.zip
+解压tomcat
+unzip apache-tomcat-9.0.14.zip
+赋予可执行权限
+cd apache-tomcat-9.0.14.zip/
+chmod a+x -R *
+启动tomcat
+cd bin
+./start.sh
+
+
+
+
+
+
+
 
 
 
