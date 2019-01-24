@@ -1,6 +1,7 @@
 package com.geekbar.admin.modules.biz.controller;
 
 import com.lemon.common.utils.R;
+import com.lemon.common.utils.StringUnicodeUtil;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -20,15 +21,12 @@ import javax.script.ScriptEngineManager;
 import java.io.FileReader;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/biz/google")
 public class GoogleController {
 
     private static final String url = "http://translate.google.cn/translate_a/single";
-
-    public static Pattern pattern = Pattern.compile("\\[\\[\\[\"([\\w\\W]*)\",\"");
 
     @RequestMapping(value = "/translation", method = RequestMethod.POST)
     public R translation(@RequestParam("content") String content) {
@@ -78,10 +76,12 @@ public class GoogleController {
             HttpEntity entity = response.getEntity();
             String result = EntityUtils.toString(entity, "utf-8");
             String substring = result.substring(4, result.indexOf("\",\""));
+            String revert = StringUnicodeUtil.unicodeStr2String(substring);
+//            String replace = revert.replaceAll("\\\\", "");
             EntityUtils.consume(entity);
             response.getEntity().getContent().close();
             response.close();
-            return R.ok().data(substring);
+            return R.ok().data(revert);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -106,5 +106,130 @@ public class GoogleController {
         }
         return result;
     }
-
 }
+
+
+
+
+//工具类,可能涉及到图片转码问题,google翻译是unicode
+package com.lemon.common.utils;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+public class StringUnicodeUtil {
+
+    /**
+     * 含有unicode 的字符串转一般字符串
+     *
+     * @param unicodeStr 混有 Unicode 的字符串
+     * @return
+     */
+    public static String unicodeStr2String(String unicodeStr) {
+        int length = unicodeStr.length();
+        int count = 0;
+        //正则匹配条件，可匹配“\\u”1到4位，一般是4位可直接使用 String regex = "\\\\u[a-f0-9A-F]{4}";
+        String regex = "\\\\u[a-f0-9A-F]{1,4}";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(unicodeStr);
+        StringBuffer sb = new StringBuffer();
+
+        while (matcher.find()) {
+            String oldChar = matcher.group();//原本的Unicode字符
+            String newChar = unicode2String(oldChar);//转换为普通字符
+            // int index = unicodeStr.indexOf(oldChar);
+            // 在遇见重复出现的unicode代码的时候会造成从源字符串获取非unicode编码字符的时候截取索引越界等
+            int index = matcher.start();
+
+            sb.append(unicodeStr.substring(count, index));//添加前面不是unicode的字符
+            sb.append(newChar);//添加转换后的字符
+            count = index + oldChar.length();//统计下标移动的位置
+        }
+        sb.append(unicodeStr.substring(count, length));//添加末尾不是Unicode的字符
+        return sb.toString();
+    }
+
+    /**
+     * 字符串转换unicode
+     *
+     * @param string
+     * @return
+     */
+    public static String string2Unicode(String string) {
+        StringBuffer unicode = new StringBuffer();
+        for (int i = 0; i < string.length(); i++) {
+            // 取出每一个字符
+            char c = string.charAt(i);
+            // 转换为unicode
+            unicode.append("\\u" + Integer.toHexString(c));
+        }
+
+        return unicode.toString();
+    }
+
+    /**
+     * unicode 转字符串
+     *
+     * @param unicode 全为 Unicode 的字符串
+     * @return
+     */
+    public static String unicode2String(String unicode) {
+        StringBuffer string = new StringBuffer();
+        String[] hex = unicode.split("\\\\u");
+
+        for (int i = 1; i < hex.length; i++) {
+            // 转换出每一个代码点
+            int data = Integer.parseInt(hex[i], 16);
+            // 追加成string
+            string.append((char) data);
+        }
+
+        return string.toString();
+    }
+}
+
+
+//google.js
+
+function token(a) {
+    var k = "";
+    var b = 406644;
+    var b1 = 3293161072;
+
+    var jd = ".";
+    var sb = "+-a^+6";
+    var Zb = "+-3^+b+-f";
+
+    for (var e = [], f = 0, g = 0; g < a.length; g++) {
+        var m = a.charCodeAt(g);
+        128 > m ? e[f++] = m : (2048 > m ? e[f++] = m >> 6 | 192 : (55296 == (m & 64512) && g + 1 < a.length && 56320 == (a.charCodeAt(g + 1) & 64512) ? (m = 65536 + ((m & 1023) << 10) + (a.charCodeAt(++g) & 1023),
+            e[f++] = m >> 18 | 240,
+            e[f++] = m >> 12 & 63 | 128) : e[f++] = m >> 12 | 224,
+            e[f++] = m >> 6 & 63 | 128),
+            e[f++] = m & 63 | 128)
+    }
+    a = b;
+    for (f = 0; f < e.length; f++)
+        a += e[f],
+            a = RL(a, sb);
+    a = RL(a, Zb);
+    a ^= b1 || 0;
+    0 > a && (a = (a & 2147483647) + 2147483648);
+    a %= 1E6;
+    return a.toString() + jd + (a ^ b)
+};
+
+function RL(a, b) {
+    var t = "a";
+    var Yb = "+";
+    for (var c = 0; c < b.length - 2; c += 3) {
+        var d = b.charAt(c + 2),
+            d = d >= t ? d.charCodeAt(0) - 87 : Number(d),
+            d = b.charAt(c + 1) == Yb ? a >>> d: a << d;
+        a = b.charAt(c) == Yb ? a + d & 4294967295 : a ^ d
+    }
+    return a
+}
+
+
+
