@@ -13,7 +13,7 @@ wget http://mirrors.jenkins.io/war/2.83/jenkins.war
 启动jenkins服务
 java -jar jenkins.war &
 关闭ssh连接,保证jenkins在后台继续执行,nohup :启动一个服务,关闭终端(类似mysql)
-nohup java -jar jenkins.war
+nohup java -jar jenkins.war --httpPort=8080 &
 
 访问jenkins
 输入 ip:8080,进入系统配置,选择插件管理,推荐安装的两款插件
@@ -79,6 +79,7 @@ ps -ef | grep tomcat
 
 #开始配置节点
 系统配置-新建节点
+远程目录配置：/root/.jenkins
 配置节点时,将Host Key Verification Strategy选项勾选为Non verifying Verification Strategy。
 如果还报其他的错误,检查一下配置的Linux的用户名密码时否正确
 
