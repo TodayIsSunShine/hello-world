@@ -64,18 +64,30 @@ mvn -version
 
 安装tomcat
 tomcat官网(http://tomcat.apache.org/)
-wget http://mirror.bit.edu.cn/apache/tomcat/tomcat-9/v9.0.14/bin/apache-tomcat-9.0.14.zip
+wget http://mirrors.shu.edu.cn/apache/tomcat/tomcat-9/v9.0.16/bin/apache-tomcat-9.0.16.zip
 解压tomcat
-unzip apache-tomcat-9.0.14.zip
+unzip apache-tomcat-9.0.16.zip
 赋予可执行权限
-cd apache-tomcat-9.0.14.zip/
+cd apache-tomcat-9.0.16.zip/
 chmod a+x -R *
 启动tomcat
 cd bin
 ./start.sh
+使用命令查看tomcat是否启动成功
+ps -ef | grep tomcat
+成功后,使用ip+端口访问
 
+#开始配置节点
+系统配置-新建节点
+配置节点时,将Host Key Verification Strategy选项勾选为Non verifying Verification Strategy。
+如果还报其他的错误,检查一下配置的Linux的用户名密码时否正确
 
-
+#新建任务
+点击Restrict where this project can be run
+Label Expression选择刚刚创建的节点,代表这个任务只能在当前节点下执行
+然后点击选项卡上的build（构建）
+添加构建步骤（add build step）
+执行shell
 
 
 
