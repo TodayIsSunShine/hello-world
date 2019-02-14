@@ -90,6 +90,9 @@ Label Expression选择刚刚创建的节点,代表这个任务只能在当前节
 添加构建步骤（add build step）
 执行shell
 
+#自动化部署过程
+1.首先获取到git服务器上最新代码----maven打包----tomcat停止---部署应用--启动tomcat--访问web页面是否生效
+
 
 
 
