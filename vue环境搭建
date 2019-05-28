@@ -3,3 +3,13 @@ http://nodejs.cn/
 
 #vue环境搭建
 https://blog.csdn.net/localhost_1314/article/details/80846692
+
+
+#脚手架vue-cli安装
+#全局安装vue-cli
+npm install --global vue-cli
+#创建一个基于webpack模板的新项目
+vue init webpack my_project
+#执行
+cd my_project
+npm run dev
