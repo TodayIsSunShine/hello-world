@@ -13,6 +13,9 @@
     export MAVEN_HOME
     export PATH=${PATH}:${MAVEN_HOME}/bin
     
+ openjdk:
+ yum -y install java-1.8.0-openjdk*
+    
     
 
 4.让修改及时生效
