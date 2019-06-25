@@ -3,19 +3,18 @@
 
 1.向centos服务器上传文件,可直接在centos上执行命令yum -y install lrzsz 程序会自动安装好,如果下载sz,上传使用rz.
 2.把上传后的jdk包解压,使用tar -zxvf 
-3.配置JavaHome,进入配置文件命令:vim/etc/profile,在底部添加
-    export JAVA_HOME=/usr/local/jdk1.8
-    export JRE_HOME=$JAVA_HOME/jre
-    export PATH=.:$JAVA_HOME/bin:$PATH
-    
-  配置maven
-    MAVEN_HOME=/usr/local/maven3
-    export MAVEN_HOME
-    export PATH=${PATH}:${MAVEN_HOME}/bin
-    
- openjdk:
+3.安装jdk
  yum -y install java-1.8.0-openjdk*
-    
+
+export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.212.b04-0.el7_6.x86_64
+export PATH=$PATH:$JAVA_HOME/bin
+
+安装maven
+https://www-us.apache.org/dist/maven/maven-3/3.6.0/binaries/apache-maven-3.6.0-bin.tar.gz 
+
+MAVEN_HOME=/usr/local/maven3
+export MAVEN_HOME
+export PATH=${PATH}:${MAVEN_HOME}/bin
     
 
 4.让修改及时生效
